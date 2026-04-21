@@ -3,43 +3,61 @@ CFLAGS = -Wall -Wextra -O2
 LDFLAGS = -lcrypto
 
 # ─── Main binary ─────────────────────────────────────────────────────────────
+CC = gcc
+CFLAGS = -Wall -Wextra -O2
+LDFLAGS = -lcrypto
 
-SRCS = object.c tree.c index.c commit.c pes.c
-OBJS = $(SRCS:.c=.o)
+# Object files
+OBJS = object.o tree.o index.o commit.o pes.o
 
+# Default target
+all: pes
+
+# Build main program
 pes: $(OBJS)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -o pes $(OBJS) $(LDFLAGS)
 
-%.o: %.c pes.h
-	$(CC) $(CFLAGS) -c $< -o $@
+# Compile individual source files
+object.o: object.c pes.h
+	$(CC) $(CFLAGS) -c object.c -o object.o
 
-# ─── Test binaries ───────────────────────────────────────────────────────────
+tree.o: tree.c pes.h tree.h index.h
+	$(CC) $(CFLAGS) -c tree.c -o tree.o
 
+index.o: index.c pes.h index.h
+	$(CC) $(CFLAGS) -c index.c -o index.o
+
+commit.o: commit.c pes.h commit.h
+	$(CC) $(CFLAGS) -c commit.c -o commit.o
+
+pes.o: pes.c pes.h
+	$(CC) $(CFLAGS) -c pes.c -o pes.o
+
+# Test: object store
 test_objects: test_objects.o object.o
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -o test_objects test_objects.o object.o $(LDFLAGS)
 
-test_tree: test_tree.o object.o tree.o
-	$(CC) -o $@ $^ $(LDFLAGS)
+test_objects.o: test_objects.c
+	$(CC) $(CFLAGS) -c test_objects.c -o test_objects.o
 
-# ─── Convenience targets ────────────────────────────────────────────────────
+# Test: tree (FIXED dependencies)
+test_tree: test_tree.o tree.o index.o object.o
+	$(CC) $(CFLAGS) -o test_tree test_tree.o tree.o index.o object.o $(LDFLAGS)
 
-.PHONY: all clean test test-unit test-integration
+test_tree.o: test_tree.c
+	$(CC) $(CFLAGS) -c test_tree.c -o test_tree.o
 
-all: pes test_objects test_tree
-
+# Clean everything
 clean:
-	rm -f pes test_objects test_tree $(OBJS) test_objects.o test_tree.o
+	rm -f pes test_objects test_tree *.o
 	rm -rf .pes
 
-test: test-unit test-integration
 
-test-unit: test_objects test_tree
-	@echo "=== Running Phase 1 tests ==="
-	./test_objects
-	@echo ""
-	@echo "=== Running Phase 2 tests ==="
-	./test_tree
 
-test-integration: pes
-	@echo "=== Running integration tests ==="
-	bash test_sequence.sh
+
+
+
+
+
+
+
