@@ -600,3 +600,32 @@ The following questions cover filesystem concepts beyond the implementation scop
 - **Git Internals** (Pro Git book): https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
 - **Git from the inside out**: https://codewords.recurse.com/issues/two/git-from-the-inside-out
 - **The Git Parable**: https://tom.preston-werner.com/2009/05/19/the-git-parable.html
+## Analysis Questions
+
+### Q5.1
+To implement `pes checkout <branch>`: update `.pes/HEAD` to point to the new branch, 
+read that branch's commit, walk its tree, and overwrite working directory files with 
+the blob contents. It is complex because you must detect modified tracked files and 
+refuse checkout if the working directory is dirty.
+
+### Q5.2
+For each file in the index, call stat() and compare mtime and size against the stored 
+index values. If any differ, the file has local edits and checkout should refuse to 
+overwrite it.
+
+### Q5.3
+In detached HEAD, commits are made but no branch pointer updates, so they become 
+unreachable orphans. Recovery: find the commit hash from .pes/objects or a reflog, 
+then create a new branch pointing to it.
+
+### Q6.1
+Start from all branch refs, do a BFS/DFS following commit→tree→blob links, collect 
+all reachable hashes into a hash set. Then scan all files under .pes/objects/ and 
+delete any whose hash is not in the set. With 100k commits and ~3 objects each, 
+expect to visit ~300k objects.
+
+### Q6.2
+Race condition: GC scans and marks a blob as unreachable. Concurrently, a new commit 
+starts and references that blob, but hasn't written the commit object yet. GC deletes 
+the blob. The new commit object now points to a missing blob — corruption. Git avoids 
+this with a grace period: GC never deletes objects newer than 2 weeks old.
